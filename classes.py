@@ -92,7 +92,9 @@ class Media:
 
     # Wait a random amount of time before entering values
     def wait(self):
-        sleep(random.randrange(config.DRIVER_SHORT_WAITING_SECONDS, config.DRIVER_MEDIUM_WAITING_SECONDS))
+        random_time = random.randrange(config.DRIVER_SHORT_WAITING_SECONDS, config.DRIVER_MEDIUM_WAITING_SECONDS)
+        print "Sleep Time = ", random_time
+        sleep(random_time)
 
     def get_total_urls(self):
         pass
@@ -147,6 +149,8 @@ class SoundClick(Media):
 
     def parse_all_urls(self, sc_obj, url_item):
         url = url_item["url"]
+
+        self.set_proxy(sc_obj)
         
         total_no = 0
         stop_flag = False
@@ -162,9 +166,8 @@ class SoundClick(Media):
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                 "Accept-Language": "en-US,en;q=0.5",
                 "Accept-Encoding": "gzip, deflate, br",
-
             }
-            url = "https://www.soundclick.com/genres/charts.cfm?genre=Rock&genreid=5&showonly=4&orderCharts=1&advstate=0&advcountry=0&advvip=0&advfeatured=0&advsigned=2"
+
             html = sc_obj.load(url, use_cache = False, headers=headers)
             error_code = self.check_proxy_status(html)
 
