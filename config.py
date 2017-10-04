@@ -4,15 +4,15 @@ sa_track_mods = False
 
 # waiting time for phantom js & other functions
 DRIVER_WAITING_SECONDS 					= 120
-DRIVER_MEDIUM_WAITING_SECONDS 			= 10
-DRIVER_SHORT_WAITING_SECONDS 			= 3
+DRIVER_MEDIUM_WAITING_SECONDS 			= 60
+DRIVER_SHORT_WAITING_SECONDS 			= 10
 
 # eror status for scraping
 ERROR_NONE 								= 0
 ERROR_TIMEOUT_EXCEPTION 				= 1
 ERROR_RETAILER_PROBLEM 					= 2
 ERROR_PROXY_PROVIDER 					= 3
-ERROR_403 								= 4
+ERROR_403_400 								= 4
 ERROR_CAPTCHA_FAILED 					= 5
 ERROR_INTERNAL_SERVER 					= 6
 

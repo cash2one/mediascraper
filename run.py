@@ -39,8 +39,8 @@ def start_scraping(threads_number, mode):
     for i in range(0, threads_number):
         sc_obj = Scraper(
             use_cache=False, #enable cache globally
-            retries=3, 
-            timeout=60,
+            timeout=120,
+            retries=3
             )
 
         sc_obj_list.append(sc_obj)
@@ -62,7 +62,7 @@ def start_scraping(threads_number, mode):
     for url in urls:
         sc_obj = random.choice(sc_obj_list)
         set_proxy(sc_obj)
-        # class_obj.parse_all_urls(sc_obj, url)
+        class_obj.parse_all_urls(sc_obj, url)
 
     print "Generating URLS..."
     for url_item in urls:
@@ -73,21 +73,20 @@ def start_scraping(threads_number, mode):
                 "genre_id": url_item["genre_id"]
             }, 
             "status":"none"})
-
-        if url_item["total_pages"] > 2:
-            for page_no in range(2, url_item["total_pages"]+1):
-                url = url_item["url"] + "&currentPage=" + str(page_no)
-                
-                total_urls.append({
-                    "item": {
-                        "url": url,
-                        "type": url_item["type"],
-                        "genre_id": url_item["genre_id"]
-                    }, 
-                    "status":"none"})
-        else:
-            print "No Pages for {}".format(url_item["url"])
-
+        if url_item["total_pages"] == 0:
+            url_item["total_pages"] = 5
+        
+        for page_no in range(2, url_item["total_pages"]+1):
+            url = url_item["url"] + "&currentPage=" + str(page_no)
+            
+            total_urls.append({
+                "item": {
+                    "url": url,
+                    "type": url_item["type"],
+                    "genre_id": url_item["genre_id"]
+                }, 
+                "status":"none"})
+        
     print "Start..."
     while True:
         while len(total_urls) > 0:

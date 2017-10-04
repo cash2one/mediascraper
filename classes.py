@@ -17,13 +17,14 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver import ActionChains
 from selenium import webdriver
 from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
-
+from proxy_list import random_proxy
 from time import gmtime, strftime
 from datetime import datetime
 from logging import exception
 import os
-
+from scrapex.http import Proxy
 from models import Song, SignedBand, UnsignedBand
+from agent import random_agent
 
 global_sc_obj = Scraper(
     use_cache=False, #enable cache globally
@@ -63,17 +64,27 @@ class Media:
     # Note proxy problems
     def check_proxy_status(self, html):
         error_code = config.ERROR_NONE
+
         # Error with proxy
         if html.response.code == 0 or html.response.code == 503:
             error_code = config.ERROR_PROXY_PROVIDER
         # Site refused proxy
-        elif html.response.code == 403:
-            error_code = config.ERROR_403
+        elif html.response.code == 403 or html.response.code == 400:
+            error_code = config.ERROR_403_400
         # 500 Internal Server Error
         elif html.response.code == 500:
             error_code = config.ERROR_INTERNAL_SERVER
 
         return error_code
+    
+    def set_proxy(self, sc_obj):
+        proxy_ip, proxy_port, proxy_user, proxy_pass = random_proxy()
+
+        auth_str = "{}:{}".format(proxy_user, proxy_pass)
+        proxy = Proxy(proxy_ip, proxy_port, auth_str)
+
+        sc_obj.proxy_manager.session_proxy = proxy
+
 
     def check_proxy_ip(self, scrape_obj):
         html = scrape_obj.load_json("http://lumtest.com/myip.json", use_cache=False)
@@ -81,7 +92,7 @@ class Media:
 
     # Wait a random amount of time before entering values
     def wait(self):
-        sleep(random.randrange(config.DRIVER_SHORT_WAITING_SECONDS))
+        sleep(random.randrange(config.DRIVER_SHORT_WAITING_SECONDS, config.DRIVER_MEDIUM_WAITING_SECONDS))
 
     def get_total_urls(self):
         pass
@@ -132,8 +143,6 @@ class SoundClick(Media):
             obj["keyword"] = url_keyword
             urls.append(obj)
 
-            break
-
         return urls
 
     def parse_all_urls(self, sc_obj, url_item):
@@ -142,10 +151,24 @@ class SoundClick(Media):
         total_no = 0
         stop_flag = False
 
-        print url
+        self.wait()
+        # print url
         while stop_flag == False:
-            html = sc_obj.load(url, use_cache = False)
-            if self.check_proxy_status(html) == config.ERROR_NONE:
+            agent_str = random_agent()[2]
+            
+            headers = {
+                "Host": "www.soundclick.com",
+                "User-Agent": agent_str,
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.5",
+                "Accept-Encoding": "gzip, deflate, br",
+
+            }
+            url = "https://www.soundclick.com/genres/charts.cfm?genre=Rock&genreid=5&showonly=4&orderCharts=1&advstate=0&advcountry=0&advvip=0&advfeatured=0&advsigned=2"
+            html = sc_obj.load(url, use_cache = False, headers=headers)
+            error_code = self.check_proxy_status(html)
+
+            if error_code == config.ERROR_NONE:
                 last_page = html.q("//div[@class='pageturner']/a[contains(text(), 'last')]")
                 
                 if len(last_page) > 0:
@@ -157,6 +180,14 @@ class SoundClick(Media):
                         pass
 
                 stop_flag = True
+            else:
+                self.set_proxy(sc_obj)
+                self.wait()
+                proxy_info = html.response.request.get("proxy")
+                error_str = "proxy error in {}, {}, {}:{}".format(url, error_code, proxy_info.host, proxy_info.port)
+                print error_str    
+
+                global_sc_obj.save(["error", error_str], "error.csv")
 
         print "Genre = ", url_item["keyword"], ", Type = ", url_item["type"], ", Total Page =", total_no
 
@@ -176,12 +207,14 @@ class SoundClick(Media):
         item["url"] = url
 
         html = sc_obj.load(url, use_cache = False)
-        if self.check_proxy_status(html) != config.ERROR_NONE:
-            error_str = "proxy error in {}".format(url)
+        error_code = self.check_proxy_status(html)
+        if error_code != config.ERROR_NONE:
+            proxy_info = html.response.request.get("proxy")
+            error_str = "proxy error in {}, {}, {}:{}".format(url, error_code, proxy_info.host, proxy_info.port)
             print error_str
 
             global_sc_obj.save(["error", error_str], "error.csv")
-            url_item["status"] = "complete"
+            url_item["status"] = "none"
             return
 
         div_objs = html.q("//div/div/div[contains(@id, 'ueberDiv')]")
