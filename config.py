@@ -1,4 +1,4 @@
-mysql_connection_string = 'mysql://root:root@10.0.0.131/media'
+mysql_connection_string = 'mysql://root:root@10.0.0.131/media?charset=utf8'
 sa_track_mods = False
 
 
@@ -19,6 +19,9 @@ ERROR_INTERNAL_SERVER 					= 6
 ROW_DATA_TYPE_SONG						= "song"
 ROW_DATA_TYPE_UNSIGNED_BAND				= "unsigned band"
 ROW_DATA_TYPE_SIGNED_BAND				= "signed band"
+
+WEBSITE_SOUND_CLICK						= 0
+WEBSITE_SOUND_CLOUD						= 1
 
 proxy_username = "amiel6322"
 proxy_password = "proxy11"
@@ -137,6 +140,10 @@ proxies = [
 ]
 
 info = {
+	"soundcloud":
+	{
+	},
+
 	"soundclick":
 	{
 		"Acoustic":{

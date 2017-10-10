@@ -18,8 +18,6 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = config.mysql_connection_string
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = config.sa_track_mods
 
-
-
 def set_proxy(sc_obj):
     proxy_ip, proxy_port, proxy_user, proxy_pass = random_proxy()
 
@@ -27,6 +25,35 @@ def set_proxy(sc_obj):
     proxy = Proxy(proxy_ip, proxy_port, auth_str)
 
     sc_obj.proxy_manager.session_proxy = proxy
+
+def custom_total_urls(mode, urls):
+    total_urls = []
+    print "Generating URLS..."
+    for url_item in urls:
+        total_urls.append({
+            "item": {
+                "url": url_item["url"],
+                "type": url_item["type"],
+                "genre_id": url_item["genre_id"]
+            }, 
+            "status":"none"})
+
+        if mode == config.WEBSITE_SOUND_CLICK:
+            if url_item["total_pages"] == 0:
+                url_item["total_pages"] = 5
+            
+            for page_no in range(2, url_item["total_pages"]+1):
+                url = url_item["url"] + "&currentPage=" + str(page_no)
+                
+                total_urls.append({
+                    "item": {
+                        "url": url,
+                        "type": url_item["type"],
+                        "genre_id": url_item["genre_id"]
+                    }, 
+                    "status":"none"})
+
+    return total_urls
 
 def start_scraping(threads_number, mode):
     global config
@@ -53,9 +80,12 @@ def start_scraping(threads_number, mode):
 
     class_obj = None
 
-    if mode == 0:
+    if mode == config.WEBSITE_SOUND_CLICK:
         class_obj = SoundClick("soundclick")
-        urls = class_obj.get_total_urls()
+    elif mode == config.WEBSITE_SOUND_CLOUD:
+        class_obj = SoundCloud("soundcloud")
+
+    urls = class_obj.get_total_urls(random.choice(sc_obj_list))
 
     print "Calculating Total Pages..."
     print "Len = ", len(urls)
@@ -63,29 +93,33 @@ def start_scraping(threads_number, mode):
         sc_obj = random.choice(sc_obj_list)
         set_proxy(sc_obj)
         class_obj.parse_all_urls(sc_obj, url)
+    
+    total_urls = custom_total_urls(mode, urls)
 
-    print "Generating URLS..."
-    for url_item in urls:
-        total_urls.append({
-            "item": {
-                "url": url_item["url"],
-                "type": url_item["type"],
-                "genre_id": url_item["genre_id"]
-            }, 
-            "status":"none"})
-        if url_item["total_pages"] == 0:
-            url_item["total_pages"] = 5
+    # total_urls = [total_urls[0]]
+
+    # print "Generating URLS..."
+    # for url_item in urls:
+    #     total_urls.append({
+    #         "item": {
+    #             "url": url_item["url"],
+    #             "type": url_item["type"],
+    #             "genre_id": url_item["genre_id"]
+    #         }, 
+    #         "status":"none"})
+    #     if url_item["total_pages"] == 0:
+    #         url_item["total_pages"] = 5
         
-        for page_no in range(2, url_item["total_pages"]+1):
-            url = url_item["url"] + "&currentPage=" + str(page_no)
+    #     for page_no in range(2, url_item["total_pages"]+1):
+    #         url = url_item["url"] + "&currentPage=" + str(page_no)
             
-            total_urls.append({
-                "item": {
-                    "url": url,
-                    "type": url_item["type"],
-                    "genre_id": url_item["genre_id"]
-                }, 
-                "status":"none"})
+    #         total_urls.append({
+    #             "item": {
+    #                 "url": url,
+    #                 "type": url_item["type"],
+    #                 "genre_id": url_item["genre_id"]
+    #             }, 
+    #             "status":"none"})
         
     print "Start..."
     while True:
@@ -121,25 +155,14 @@ def start_scraping(threads_number, mode):
         if len(total_urls) == 0:
             break
 
-def check_process():
-    processname = 'python random_inquiry.py'
-    tmp = os.popen("ps -Af").read()
-
-    proccount = tmp.count(processname)
-
-    if proccount == 2:
-        print(proccount, ' processes running of ', processname, 'type')
-        exit()
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Do something.")
     parser.add_argument('-t', '--threads', type=int, required=False,  default=1, help='Number of threads')
-    parser.add_argument('-m', '--mode', type=str, required=False, default=0, help='Website Mode: 0->soundclick')
+    parser.add_argument('-m', '--mode', type=str, required=False, default=0, help='Website Mode: 0->soundclick, 1->soundcloud')
     
     args = parser.parse_args()
     
     threads_number = args.threads
     website_mode = args.mode
 
-    start_scraping(threads_number, website_mode)
+    start_scraping(threads_number, int(website_mode))
