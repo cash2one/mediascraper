@@ -142,93 +142,11 @@ proxies = [
 info = {
 	"soundcloud":
 	{
+		"root": "https://soundcloud.com"
 	},
 
 	"soundclick":
 	{
-		"Acoustic":{
-			"url_keyword" : "Acoustic",
-			"genre_id": 1,
-		},
-
-		"Beats/Instrumentals":{
-			"url_keyword" : "Instrumentals",
-			"genre_id": 7,
-		},
-
-		"Classical":{
-			"url_keyword" : "Classical",
-			"genre_id": 14,
-		},
-
-		"Country":{
-			"url_keyword" : "Country",
-			"genre_id": 16,
-		},
-
-		"Hip Hop":{
-			"url_keyword" : "HipHop",
-			"genre_id": 19,
-		},
-
-		"Latin":{
-			"url_keyword" : "Latin",
-			"genre_id": 9,
-		},
-
-		"Pop":{
-			"url_keyword" : "Pop",
-			"genre_id": 3,
-		},
-
-		"Talk & Poetry":{
-			"url_keyword" : "Talk",
-			"genre_id": 210,
-		},
-
-		"World":{
-			"url_keyword" : "World",
-			"genre_id": 6,
-		},
-
-		"Alternative":{
-			"url_keyword" : "Alternative",
-			"genre_id": 12,
-		},
-
-		"Blues":{
-			"url_keyword" : "Blues",
-			"genre_id": 13,
-		},
-
-		"Comedy":{
-			"url_keyword" : "Comedy",
-			"genre_id": 15,
-		},
-
-		"Electronic":{
-			"url_keyword" : "Electronic",
-			"genre_id": 17,
-		},
-
-		"Jazz":{
-			"url_keyword" : "Jazz",
-			"genre_id": 2,
-		},
-
-		"Metal":{
-			"url_keyword" : "Metal",
-			"genre_id": 10,
-		},
-
-		"Rock":{
-			"url_keyword" : "Rock",
-			"genre_id": 5,
-		},
-
-		"Urban/R&B":{
-			"url_keyword" : "Urban",
-			"genre_id": 4,
-		},
+		"root": "https://www.soundclick.com"
 	}
 }

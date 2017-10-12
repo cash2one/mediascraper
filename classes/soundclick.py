@@ -1,18 +1,76 @@
 from base import *
 
 class SoundClick(Media):
-    def get_total_urls(self, sc_obj=None):
-        config_objs = config.info["soundclick"]
+    def save_genre(self):
+        config_info = config.info[self.class_name]
+        root_url = config_info["root"]
+        
+        print "Try to get genre list in {}".format(root_url)
+
+        html = self.rand_sc.load(root_url, use_cache=False)
+        error_code = self.check_proxy_status(html)
+
+        if error_code == config.ERROR_NONE:
+            genre_list = html.q("//td[@class='genres']/div[@class='genrelink']")
+            print "Genre Len = ", len(genre_list)
+
+            for genre_item in genre_list:
+                href_link = genre_item.x("a/@href").strip()
+                genre_name = genre_item.x("a/text()").strip()
+                url_keyword = re.search("genre=(.*)", href_link, re.I|re.S|re.M).group(1)
+
+                db_obj = self.rand_sa_db.session.query(Genre).filter_by(genre_name=genre_name, source_site=self.class_name).first()
+
+                if db_obj == None: 
+                    db_obj = Genre(
+                            genre_name = genre_name,
+                            genre_url_keyword = url_keyword,
+                            source_site = self.class_name,
+                        )
+
+                    self.rand_sa_db.session.add(db_obj)
+
+                else:
+                    db_obj.genre_name = genre_name
+                    db_obj.genere_url_keyword = url_keyword
+                    db_obj.source_site = self.class_name
+
+                self.rand_sa_db.session.commit()
+
+        print "{} genres saved".format(len(genre_list))
+        print "***************** Completed *****************"
+
+    def get_total_urls(self):
+        db_obj = list(self.rand_sa_db.session.query(Genre).filter_by(source_site=self.class_name).all())
+
+        print "Genre List = ", len(db_obj)
+        if len(db_obj) == 0:
+            self.save_genre()
+
+        config_info = config.info[self.class_name]
+        root_url = config_info["root"]
+
+        site_obj = {}
+        for db_item in db_obj:
+
+            genre_name = db_item.genre_name
+            genre_id = db_item.genre_id
+            url_keyword = db_item.genre_url_keyword
+
+            site_obj[genre_name] = {
+                "url_keyword": url_keyword,
+                "genre_id": genre_id
+            }
 
         urls = []
-        for keyword in config_objs.keys():
-            value =  config_objs[keyword]
+        for keyword in site_obj.keys():
+            value =  site_obj[keyword]
             url_keyword = value["url_keyword"]
             genre_id = value["genre_id"]
 
             # song url
             mark = 0
-            url = "https://www.soundclick.com/genres/charts.cfm?genre={}&genreid={}&showonly={}&orderCharts=1&advstate=0&advcountry=0&advvip=0&advfeatured=0&advsigned=2".format(url_keyword, genre_id, mark)
+            url = "{}/genres/charts.cfm?genre={}&showonly={}&orderCharts=1&advstate=0&advcountry=0&advvip=0&advfeatured=0&advsigned=2".format(root_url, url_keyword, mark)
             obj = {}
             obj["genre_id"] = genre_id
             obj["type"] = config.ROW_DATA_TYPE_SONG
@@ -23,7 +81,7 @@ class SoundClick(Media):
 
             # signed url
             mark = 3
-            url = "https://www.soundclick.com/genres/charts.cfm?genre={}&genreid={}&showonly={}&orderCharts=1&advstate=0&advcountry=0&advvip=0&advfeatured=0&advsigned=2".format(url_keyword, genre_id, mark)
+            url = "{}/genres/charts.cfm?genre={}&showonly={}&orderCharts=1&advstate=0&advcountry=0&advvip=0&advfeatured=0&advsigned=2".format(root_url, url_keyword, mark)
             obj = {}
             obj["genre_id"] = genre_id
             obj["type"] = config.ROW_DATA_TYPE_SIGNED_BAND
@@ -34,7 +92,7 @@ class SoundClick(Media):
 
             # unsigned url
             mark = 4
-            url = "https://www.soundclick.com/genres/charts.cfm?genre={}&genreid={}&showonly={}&orderCharts=1&advstate=0&advcountry=0&advvip=0&advfeatured=0&advsigned=2".format(url_keyword, genre_id, mark)
+            url = "{}/genres/charts.cfm?genre={}&showonly={}&orderCharts=1&advstate=0&advcountry=0&advvip=0&advfeatured=0&advsigned=2".format(root_url, url_keyword, mark)
             obj = {}
             obj["genre_id"] = genre_id
             obj["type"] = config.ROW_DATA_TYPE_UNSIGNED_BAND

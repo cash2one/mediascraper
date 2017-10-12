@@ -13,8 +13,7 @@ import os
 from scrapex.http import Proxy
 import json
 from models import *
-reload(sys)
-sys.setdefaultencoding('utf-8')
+from agent import random_agent
 
 global_sc_obj = Scraper(
     use_cache=False, #enable cache globally
@@ -23,10 +22,12 @@ global_sc_obj = Scraper(
     )
 
 class Media:
-    def __init__(self, class_name):
+    def __init__(self, class_name, rand_sc, rand_sa_db):
         self.class_name = class_name
         self.begin_time = datetime.now()
         self.page_error = config.ERROR_NONE
+        self.rand_sc = rand_sc
+        self.rand_sa_db = rand_sa_db
 
     # Show details of exception error
     def show_exception_detail(self, e):
@@ -70,11 +71,14 @@ class Media:
         print "Sleep Time = ", random_time
         sleep(random_time)
 
-    def get_total_urls(self, sc_obj=None):
+    def get_total_urls(self):
         pass
 
     def parse_website(self, sa_db, sc_obj, url_obj, total_urls):
         pass
 
     def parse_all_urls(self, sc_obj, url_item):
+        pass
+
+    def save_genre(self):
         pass

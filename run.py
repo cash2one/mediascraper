@@ -79,16 +79,19 @@ def start_scraping(threads_number, mode):
     urls = []
 
     class_obj = None
+    random_sc = random.choice(sc_obj_list)
+    random_sa_db = random.choice(sa_db_list)
 
     if mode == config.WEBSITE_SOUND_CLICK:
-        class_obj = SoundClick("soundclick")
+        class_obj = SoundClick("soundclick", random_sc, random_sa_db)
     elif mode == config.WEBSITE_SOUND_CLOUD:
-        class_obj = SoundCloud("soundcloud")
+        class_obj = SoundCloud("soundcloud", random_sc, random_sa_db)
 
-    urls = class_obj.get_total_urls(random.choice(sc_obj_list))
-
+    urls = class_obj.get_total_urls()
+    
     print "Calculating Total Pages..."
     print "Len = ", len(urls)
+
     for url in urls:
         sc_obj = random.choice(sc_obj_list)
         set_proxy(sc_obj)
@@ -96,31 +99,8 @@ def start_scraping(threads_number, mode):
     
     total_urls = custom_total_urls(mode, urls)
 
-    # total_urls = [total_urls[0]]
+    total_urls = [total_urls[0]]
 
-    # print "Generating URLS..."
-    # for url_item in urls:
-    #     total_urls.append({
-    #         "item": {
-    #             "url": url_item["url"],
-    #             "type": url_item["type"],
-    #             "genre_id": url_item["genre_id"]
-    #         }, 
-    #         "status":"none"})
-    #     if url_item["total_pages"] == 0:
-    #         url_item["total_pages"] = 5
-        
-    #     for page_no in range(2, url_item["total_pages"]+1):
-    #         url = url_item["url"] + "&currentPage=" + str(page_no)
-            
-    #         total_urls.append({
-    #             "item": {
-    #                 "url": url,
-    #                 "type": url_item["type"],
-    #                 "genre_id": url_item["genre_id"]
-    #             }, 
-    #             "status":"none"})
-        
     print "Start..."
     while True:
         while len(total_urls) > 0:

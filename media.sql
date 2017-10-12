@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Oct 04, 2017 at 08:08 AM
+-- Generation Time: Oct 12, 2017 at 02:57 AM
 -- Server version: 5.7.19-0ubuntu0.16.04.1
 -- PHP Version: 7.0.22-0ubuntu0.16.04.1
 
@@ -19,6 +19,19 @@ SET time_zone = "+00:00";
 --
 -- Database: `media`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `genre`
+--
+
+CREATE TABLE `genre` (
+  `genre_id` int(11) NOT NULL,
+  `genre_name` varchar(500) NOT NULL,
+  `genre_url_keyword` varchar(500) NOT NULL,
+  `source_site` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -50,7 +63,7 @@ CREATE TABLE `song` (
   `ranking` int(11) NOT NULL,
   `last_ranking` int(11) NOT NULL,
   `image_link` text NOT NULL,
-  `name` varchar(500) NOT NULL,
+  `name` varchar(255) NOT NULL,
   `song_artist_name` varchar(500) NOT NULL,
   `artist_page_link` text NOT NULL,
   `genre_id` int(11) NOT NULL,
@@ -82,6 +95,12 @@ CREATE TABLE `unsignedband` (
 --
 
 --
+-- Indexes for table `genre`
+--
+ALTER TABLE `genre`
+  ADD PRIMARY KEY (`genre_id`);
+
+--
 -- Indexes for table `signedband`
 --
 ALTER TABLE `signedband`
@@ -104,20 +123,25 @@ ALTER TABLE `unsignedband`
 --
 
 --
+-- AUTO_INCREMENT for table `genre`
+--
+ALTER TABLE `genre`
+  MODIFY `genre_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=146;
+--
 -- AUTO_INCREMENT for table `signedband`
 --
 ALTER TABLE `signedband`
-  MODIFY `p_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+  MODIFY `p_id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `song`
 --
 ALTER TABLE `song`
-  MODIFY `p_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+  MODIFY `p_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47318;
 --
 -- AUTO_INCREMENT for table `unsignedband`
 --
 ALTER TABLE `unsignedband`
-  MODIFY `p_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+  MODIFY `p_id` int(11) NOT NULL AUTO_INCREMENT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

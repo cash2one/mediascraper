@@ -2,160 +2,271 @@ from base import *
 from sqlalchemy import text
 
 class SoundCloud(Media):
-    def get_total_urls(self, sc_obj=None):
+	def save_genre(self):
+		config_info = config.info[self.class_name]
+		root_url = config_info["root"]
 
-        html = sc_obj.load("https://soundcloud.com/charts",  use_cache = False)
-        # with open("response.html", 'w') as f:
-        #     f.write(html.encode("utf8"))
-        #     print html
-        
-        # return
-        genre_list = html.q("//section[@class='categories']/article")
+		print "Try to get genre list in {}".format(root_url)
+		
+		html = self.rand_sc.load("{}/charts".format(root_url), use_cache=False)
+		error_code = self.check_proxy_status(html)
 
-        # print len(genre_list)
+		total_genres = 0
+		if error_code == config.ERROR_NONE:
+			genre_list = html.q("//section[@class='categories']/article")
 
-        for genre in genre_list:
-            h2_str = genre.q("h2[contains(text(), 'Choose a genre')]")
+			skip_flag = False
+			for genre in genre_list:
+				if skip_flag == True:
+					break
 
-            if len(h2_str) > 0:
-                articles = genre.q(".//ul/li")
+				h2_str = genre.q("h2[contains(text(), 'Choose a genre')]")
+				
+				if len(h2_str) > 0:
+					articles = genre.q(".//ul/li")
 
-                for i , article in enumerate(articles):
-                    if i > 1:
-                        genre_str = article.x("a/text()")
-                        href_link =  article.x("a/@href")
-                        genre_link = re.search("genre=(.*)", href_link, re.I|re.S|re.M).group(1)                        
-                        
-                        config.info[self.class_name][genre_str] = {"url_keyword": genre_link, "genre_id":0}
+					for i , article in enumerate(articles):
+						if i > 1:
+							genre_name = article.x("a/text()")
+							href_link =  article.x("a/@href")
+							url_keyword = re.search("genre=(.*)", href_link, re.I|re.S|re.M).group(1)                        
+							
+							if genre_name == "Audiobooks" or genre_name == "Business":
+								skip_flag = True
+								break
 
-        config_objs = config.info[self.class_name]
+							db_obj = self.rand_sa_db.session.query(Genre).filter_by(genre_name=genre_name, source_site=self.class_name).first()
 
-        urls = []
-        for keyword in config_objs.keys():
+							if db_obj == None: 
+								db_obj = Genre(
+										genre_name = genre_name,
+										genre_url_keyword = url_keyword,
+										source_site = self.class_name,
+									)
 
-            value =  config_objs[keyword]
-            url_keyword = value["url_keyword"]
-            genre_id = value["genre_id"]
+								self.rand_sa_db.session.add(db_obj)
 
-            # song url
-            client_id = "OmTFHKYSMLFqnu2HHucmclAptedxWXkq"
-            app_version = "1507542500"
-            offset = 0
-            limit = 100
+							else:
+								db_obj.genre_name = genre_name
+								db_obj.genere_url_keyword = url_keyword
+								db_obj.source_site = self.class_name
 
-            url = "https://api-v2.soundcloud.com/charts?genre=soundcloud:genres:{}&offset={}&high_tier_only=false&kind=top&limit={}&client_id={}&app_version={}".format(url_keyword, offset, limit, client_id, app_version)
-            
-            obj = {}
-            obj["genre_id"] = genre_id
-            obj["type"] = config.ROW_DATA_TYPE_SONG
-            obj["url"] = url
-            obj["total_pages"] = 0
-            obj["keyword"] = url_keyword
-            urls.append(obj)
+							self.rand_sa_db.session.commit()
 
-        return urls
+							total_genres += 1
 
-    def parse_website(self, sa_db, sc_obj, url_item, total_urls):
-        url_obj = url_item["item"]
-        item = {}
+		print "{} genres saved".format(total_genres)
+		print "***************** Completed *****************"
 
-        url = url_obj["url"]
+	def get_total_urls(self):
 
-        print "*************************LEFT URL = ", len(total_urls)
-        print url
+		db_obj = list(self.rand_sa_db.session.query(Genre).filter_by(source_site=self.class_name).all())
 
-        item["type"] = url_obj["type"]
+		print "Genre List = ", len(db_obj)
+		if len(db_obj) == 0:
+			self.save_genre()
 
-        item["genre_id"] = url_obj["genre_id"]
-        item["rank_date"] = self.begin_time.strftime("%Y-%m-%d %H-%M-%S")
-        item["source_site"] = self.class_name
-        item["url"] = url
+		config_info = config.info[self.class_name]
+		root_url = config_info["root"]
 
-        json_obj = sc_obj.load_json(url, use_cache = False)
-        # error_code = self.check_proxy_status(html)
+		site_obj = {}
+		for db_item in db_obj:
 
-        # print "Error Code = ", error_code
-        # if error_code != config.ERROR_NONE:
-        #     proxy_info = html.response.request.get("proxy")
-        #     error_str = "proxy error in {}, {}, {}:{}".format(url, error_code, proxy_info.host, proxy_info.port)
-        #     print error_str
+			genre_name = db_item.genre_name
+			genre_id = db_item.genre_id
+			url_keyword = db_item.genre_url_keyword
 
-        #     global_sc_obj.save(["error", error_str], "error.csv")
-        #     url_item["status"] = "none"
-        #     return
+			site_obj[genre_name] = {
+				"url_keyword": url_keyword,
+				"genre_id": genre_id
+			}
 
-        if json_obj == None:
-            print "Data does not exist ->", url
-            url_item["status"] = "complete"
-            return
+		urls = []
+		for keyword in site_obj.keys():
+			value =  site_obj[keyword]
+			url_keyword = value["url_keyword"]
+			genre_id = value["genre_id"]
 
-        collections = json_obj["collection"]
-        # print "Len=", len(collections)
+			# song url
+			client_id = "OmTFHKYSMLFqnu2HHucmclAptedxWXkq"
+			app_version = "1507542500"
+			offset = 0
+			limit = 100
 
-        for i, collection in enumerate(collections):
+			url = "https://api-v2.soundcloud.com/charts?genre=soundcloud:genres:{}&offset={}&high_tier_only=false&kind=top&limit={}&client_id={}&app_version={}".format(url_keyword, offset, limit, client_id, app_version)
+			
+			obj = {}
+			obj["genre_id"] = genre_id
+			obj["type"] = config.ROW_DATA_TYPE_SONG
+			obj["url"] = url
+			obj["total_pages"] = 0
+			obj["keyword"] = url_keyword
+			urls.append(obj)
 
-            try:
-                item["ranking"] = i + 1
-                item["last_ranking"] = i + 1
+		return urls
 
-                item["img_url"] = collection["track"]["artwork_url"]
+	def parse_website(self, sa_db, sc_obj, url_item, total_urls):
+		url_obj = url_item["item"]
+		item = {}
 
-                if item["img_url"] == None:
-                    item["img_url"] = collection["track"]["user"]["avatar_url"]
+		url = url_obj["url"]
 
-                item["artist_link"] = collection["track"]["user"]["permalink_url"]
+		print "*************************LEFT URL = ", len(total_urls)
+		print url
 
-                item["name"] = ""
-                item["song_artist_name"] = ""
+		item["type"] = url_obj["type"]
 
-                if item["type"] == config.ROW_DATA_TYPE_SONG:
-                    title_str = collection["track"]["title"]
-                    artist_name_str = collection["track"]["user"]["username"]
+		item["genre_id"] = url_obj["genre_id"]
+		item["rank_date"] = self.begin_time.strftime("%Y-%m-%d %H-%M-%S")
+		item["source_site"] = self.class_name
+		item["url"] = url
 
-                    item["name"] = title_str
-                    item["song_artist_name"] = artist_name_str
+		url = "https://api-v2.soundcloud.com/charts?genre=soundcloud:genres:pop&offset=0&high_tier_only=false&kind=top&limit=100&client_id=OmTFHKYSMLFqnu2HHucmclAptedxWXkq&app_version=1507542500"
+		try:
+			json_obj = sc_obj.load_json(url, use_cache = False)
+		except:
+			url_item["status"] = "none"
+			return
+		# error_code = self.check_proxy_status(html)
 
-                db_obj = None
-                exist = False
-                if item["type"] == config.ROW_DATA_TYPE_SONG:
-                    db_obj = sa_db.session.query(Song).filter_by(name=item["name"], song_artist_name =item["song_artist_name"], source_site=item["source_site"]).first()
+		# print "Error Code = ", error_code
+		# if error_code != config.ERROR_NONE:
+		#     proxy_info = html.response.request.get("proxy")
+		#     error_str = "proxy error in {}, {}, {}:{}".format(url, error_code, proxy_info.host, proxy_info.port)
+		#     print error_str
 
-                    if db_obj == None:
-                        db_obj = Song(
-                            ranking = item["ranking"],
-                            last_ranking = item["last_ranking"], 
-                            image_link = item["img_url"], 
-                            name = item["name"], 
-                            song_artist_name = item["song_artist_name"],
-                            artist_page_link = item["artist_link"], 
-                            genre_id = item["genre_id"], 
-                            rank_date = item["rank_date"], 
-                            source_site = item["source_site"]
-                        )
-                    else:   # Upate Part
-                        exist = True
+		#     global_sc_obj.save(["error", error_str], "error.csv")
+		#     url_item["status"] = "none"
+		#     return
 
-                try:
-                    if exist == False:
-                        sa_db.session.add(db_obj)
+		if json_obj == None:
+			print "Data does not exist ->", url
+			url_item["status"] = "complete"
+			return
 
-                    else:
-                        db_obj.ranking = item["ranking"]
-                        db_obj.last_ranking = item["last_ranking"]
-                        db_obj.image_link = item["img_url"]
-                        db_obj.artist_page_link = item["artist_link"]
-                        db_obj.song_artist_name = item["song_artist_name"]
-                        db_obj.rank_date = item["rank_date"]
-                    
-                    sa_db.session.commit()
+		collections = json_obj["collection"]
+		
+		total_count = 0
+		for i, collection in enumerate(collections):
 
-                except Exception as e:
-                    sa_db.session.rollback()
-                    print item["name"], item["song_artist_name"]
-                    # self.show_exception_detail(e)
-                    # break
+			try:
+				item["ranking"] = i + 1
+				item["last_ranking"] = i + 1
 
-            except Exception as e:
-                self.show_exception_detail(e)
+				item["img_url"] = collection["track"]["artwork_url"]
 
-        url_item["status"] = "complete"
+				if item["img_url"] == None:
+					item["img_url"] = collection["track"]["user"]["avatar_url"]
+
+				item["artist_link"] = collection["track"]["user"]["permalink_url"]
+
+				item["name"] = ""
+				item["song_artist_name"] = ""
+
+				if item["type"] == config.ROW_DATA_TYPE_SONG:
+					title_str = collection["track"]["title"].encode("utf-8")
+					artist_name_str = collection["track"]["user"]["username"].encode("utf-8")
+					
+					title_convert_str = ""
+					artist_convert_str = ""
+
+					title_str = unicode(title_str, "utf-8")
+					artist_name_str = unicode(artist_name_str, "utf-8")
+
+					title_convert_str = re.sub(ur"[^\u0000\u0000-\uffff\uffff]", "", title_str, flags=re.UNICODE)
+					artist_convert_str = re.sub(ur"[^\u0000\u0000-\uffff\uffff]", "", artist_name_str, flags=re.UNICODE)
+
+					if (title_str != title_convert_str) or (artist_name_str != artist_convert_str):
+
+						global_sc_obj.save([
+							"type", "",
+							"string", "******************",
+							], "log.csv");
+
+						global_sc_obj.save([
+							"type", "origin song name",
+							"string", title_str,
+							], "log.csv");
+						global_sc_obj.save([
+							"type", "fixed song name",
+							"string", title_convert_str,
+							], "log.csv");
+						global_sc_obj.save([
+							"type", "original artist name",
+							"string", artist_name_str,
+							], "log.csv");
+						global_sc_obj.save([
+							"type", "fixed artist name",
+							"string", artist_convert_str,
+							], "log.csv");
+
+					item["name"] = title_convert_str
+					item["song_artist_name"] = artist_convert_str
+				
+				db_obj = None
+				exist = False
+				if item["type"] == config.ROW_DATA_TYPE_SONG:
+					db_obj = sa_db.session.query(Song).filter_by(
+						name=item["name"], 
+						song_artist_name =item["song_artist_name"], 
+						genre_id=item["genre_id"], 
+						source_site=item["source_site"],
+						artist_page_link=item["artist_link"],
+						image_link = item["img_url"]
+					).first()
+
+					if db_obj == None:
+						db_obj = Song(
+							ranking = item["ranking"],
+							last_ranking = item["last_ranking"], 
+							image_link = item["img_url"], 
+							name = item["name"], 
+							song_artist_name = item["song_artist_name"],
+							artist_page_link = item["artist_link"], 
+							genre_id = item["genre_id"], 
+							rank_date = item["rank_date"], 
+							source_site = item["source_site"]
+						)
+
+					else:   # Upate Part
+						# print "***********************************"
+						# print db_obj.name
+						# print db_obj.song_artist_name
+						# print db_obj.artist_page_link
+						# print db_obj.image_link
+						# print db_obj.ranking
+						# print db_obj.last_ranking
+						# print str(item)
+						# print "***********************************"
+						exist = True
+
+				try:
+					if exist == False:
+						sa_db.session.add(db_obj)
+
+					else:
+						db_obj.ranking = item["ranking"]
+						db_obj.last_ranking = item["last_ranking"]
+						db_obj.image_link = item["img_url"]
+						db_obj.artist_page_link = item["artist_link"]
+						db_obj.song_artist_name = item["song_artist_name"]
+						db_obj.rank_date = item["rank_date"]
+					
+					sa_db.session.commit()
+					total_count += 1
+
+				except Exception as e:
+					sa_db.session.rollback()
+					print "?????????????????????????????"
+					print item["name"], item["song_artist_name"]
+					print url
+					print "?????????????????????????????"
+					self.show_exception_detail(e)
+					break
+
+			except Exception as e:
+				self.show_exception_detail(e)
+
+		print "Len=", len(collections),  " Saved=", total_count
+		url_item["status"] = "complete"
+
